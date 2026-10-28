@@ -1,0 +1,13 @@
+{
+  "name": "mini-crm-school",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "dependencies": {
+    "@prisma/client": "^5.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.0.0"
+  }
+}
