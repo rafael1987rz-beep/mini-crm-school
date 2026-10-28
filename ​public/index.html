@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учёт оплат учебного центра</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen py-8 px-4">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <header class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h1 class="text-2xl font-bold text-gray-800">Учёт оплат учебного центра</h1>
+            <p class="text-sm text-gray-500 mt-1">Контроль задолженностей и внесение платежей</p>
+        </header>
+
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Внести оплату</h2>
+            <form id="paymentForm" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <select id="payStudent" class="border rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500" required></select>
+                <input type="number" id="payAmount" placeholder="Сумма (сум)" step="any" class="border rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500" required>
+                <button type="submit" class="bg-blue-600 text-white font-medium rounded-xl py-2.5 hover:bg-blue-700 transition">Добавить оплату</button>
+            </form>
+        </section>
+
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <h2 class="text-lg font-semibold text-gray-800">Список должников</h2>
+                <div class="flex items-center gap-2">
+                    <label for="filterMonth" class="text-sm text-gray-600">Месяц:</label>
+                    <input type="month" id="filterMonth" class="border rounded-xl px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b text-gray-400 text-xs uppercase tracking-wider">
+                            <th class="py-3 px-4">Ученик</th>
+                            <th class="py-3 px-4">Группа</th>
+                            <th class="py-3 px-4">Телефон</th>
+                            <th class="py-3 px-4">Месячная плата</th>
+                            <th class="py-3 px-4">Внесено</th>
+                            <th class="py-3 px-4 text-red-600">Долг</th>
+                        </tr>
+                    </thead>
+                    <tbody id="debtorsList" class="divide-y text-sm text-gray-700"></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const API_URL = '';
+        const monthInput = document.getElementById('filterMonth');
+        const now = new Date();
+        monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        async function loadStudents() {
+            const res = await fetch(`${API_URL}/students`);
+            const students = await res.json();
+            const select = document.getElementById('payStudent');
+            select.innerHTML = '<option value="">Выберите ученика...</option>';
+            students.forEach(s => {
+                select.innerHTML += `<option value="${s.id}">${s.name} (${s.group})</option>`;
+            });
+        }
+
+        async function loadDebtors() {
+            const month = monthInput.value;
+            if (!month) return;
+            const res = await fetch(`${API_URL}/debtors?month=${month}`);
+            const debtors = await res.json();
+            const tbody = document.getElementById('debtorsList');
+            tbody.innerHTML = '';
+            
+            if (debtors.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-gray-400">В этом месяце должников нет 🎉</td></tr>`;
+                return;
+            }
+
+            debtors.forEach(d => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-3 px-4 font-medium text-gray-900">${d.name}</td>
+                        <td class="py-3 px-4">${d.group}</td>
+                        <td class="py-3 px-4">${d.phone}</td>
+                        <td class="py-3 px-4">${d.monthlyFee.toLocaleString()}</td>
+                        <td class="py-3 px-4">${d.paid.toLocaleString()}</td>
+                        <td class="py-3 px-4 font-semibold text-red-600">${d.debt.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const studentId = document.getElementById('payStudent').value;
+            const amount = document.getElementById('payAmount').value;
+
+            const res = await fetch(`${API_URL}/payments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId, amount })
+            });
+
+            if (res.ok) {
+                alert('Оплата успешно добавлена!');
+                document.getElementById('payAmount').value = '';
+                loadDebtors();
+            } else {
+                alert('Ошибка при добавлении оплаты');
+            }
+        });
+
+        monthInput.addEventListener('change', loadDebtors);
+
+        loadStudents();
+        loadDebtors();
+    </script>
+</body>
+</html>
